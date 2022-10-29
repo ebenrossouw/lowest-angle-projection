@@ -16,23 +16,22 @@ N = 100
 
 pt.manual_seed(seed)
 X = pt.distributions.Normal(pt.tensor([0.0, 2.0, 3.0]), pt.tensor([1.0, 1.0, 0.02])).sample((N,))
-X = X - X.mean(axis = 0)
-# show_data(X)
-
-Z = PCA(n_components = 2).fit_transform(X.numpy())
+# Z = PCA(n_components = 2).fit_transform(X.numpy())
 # show_data(Z)
 
 X[0,2] = 100
 X[1,2] = 120
 X[2,2] = 95
+X = X - X.mean(dim = 0)
+
 Z = PCA(n_components = 2).fit_transform(X.numpy())
-show_data(Z)
+# show_data(Z)
 
 def lap(X:pt.Tensor, epsilon:float = 0.00001, seed:int = None, max_iter:int = 1_000) -> pt.Tensor:
     K = 2
     if seed is not None:
         pt.manual_seed(seed)
-    X = X - X.mean(axis = 0) # center data
+    X = X - X.mean(dim = 0) # center data
     W = pt.distributions.Uniform(-1.0, 1.0).sample((X.shape[1], K))
     W.requires_grad_(True)
     opt = optim.SGD([W], lr = 1.0, momentum = 0.9)
@@ -40,11 +39,10 @@ def lap(X:pt.Tensor, epsilon:float = 0.00001, seed:int = None, max_iter:int = 1_
     for t in range(max_iter):
         W_prev = W.data.clone()
         Y = X @ W @ pt.linalg.solve(W.T @ W, W.T)
-        R = pt.sum(X * Y, dim = 1) / (pt.linalg.norm(Y, dim = 1) * pt.linalg.norm(X, dim = 1))
-        R = R.mean()
+        R = pt.sum(X * Y, dim = 1) / (pt.norm(Y, dim = 1) * pt.norm(X, dim = 1))
 
         opt.zero_grad()
-        R.backward()
+        pt.mean(R).backward()
         opt.step()
         if (pt.abs(W.data - W_prev) < epsilon).all():
             break
@@ -58,3 +56,10 @@ def lap(X:pt.Tensor, epsilon:float = 0.00001, seed:int = None, max_iter:int = 1_
 
 W = lap(X, epsilon=1.0e-4, seed = seed, max_iter = 1_000)
 show_data(X @ W)
+
+
+### Solve analytically ###
+
+X = X.numpy()
+
+
